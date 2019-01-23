@@ -1,0 +1,7 @@
+{
+    "name": "native_receiver",
+    "description": "The tool that receive the traffic from browser and forward it to service",
+    "path": "<your-path>/bin/native-receiver/native_receiver",
+    "type": "stdio",
+    "allowed_extensions": [ "web-traffic-filtering@example.com" ]
+}
