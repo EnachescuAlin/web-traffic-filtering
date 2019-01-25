@@ -8,7 +8,7 @@ all: build
 NATIVE_RECEIVER_BIN_DIR = $(BIN_DIR)/native-receiver
 NATIVE_RECEIVER_SRC_DIR = ./native-receiver
 NATIVE_RECEIVER_INCLUDE_PATH = -I./common/logger
-_NATIVE_RECEIVER_OBJ = main.o
+_NATIVE_RECEIVER_OBJ = main.o extension_comm.o
 NATIVE_RECEIVER_OBJ = $(patsubst %,$(NATIVE_RECEIVER_BIN_DIR)/%,$(_NATIVE_RECEIVER_OBJ))
 
 LOGGER_BIN_DIR = $(BIN_DIR)/logger
