@@ -3,6 +3,41 @@ let filteredUrls = [
     "http://www.phiorg.ro/*"
 ];
 
+function sendMessageAndWaitForResponse(message) {
+    return new Promise((resolve, reject) => {
+        browser.runtime.sendNativeMessage("native_receiver", message)
+            .then((response) => {
+                resolve(response);
+            }, (error) => {
+                resolve({ "error": `${error}` });
+            })
+    })
+}
+
+async function onBeforeRequestSendMessage(details)
+{
+    let message = { state: "onBeforeRequest" };
+    if (details.documentUrl) {
+        message.documentUrl = details.documentUrl;
+    }
+    if (details.originalUrl) {
+        message.originalUrl = details.originalUrl;
+    }
+    if (details.url) {
+        message.url = details.url;
+    }
+    if (details.method) {
+        message.method = details.method;
+    }
+    if (details.requestBody) {
+        message.requestBody = details.requestBody;
+    }
+
+    await console.info(`sending data requestId = ${details.requestId}`
+        + `, message = ${JSON.stringify(message)}`);
+    return await sendMessageAndWaitForResponse(message);
+}
+
 async function onBeforeRequestCbk(details) {
     await console.info(`called onBeforeRequestCbk requestId = ${details.requestId}`);
 
@@ -11,9 +46,12 @@ async function onBeforeRequestCbk(details) {
     let decoder = await new TextDecoder("utf-8");
     let encoder = await new TextEncoder();
 
-    /*
-     * send documentUrl, originUrl, url, method and requestBody to native app
-     */
+    await console.info(`onBeforeRequestCbk received details requestId = ${details.requestId}`
+        + `, documentUrl = ${details.documentUrl}, originalUrl = ${details.originalUrl}`
+        + `, url = ${details.url}, method = ${details.method}, requestBody = ${details.requestBody}`);
+
+    let response = await onBeforeRequestSendMessage(details);
+    await console.info(`onBeforeRequestCbk received response = ${JSON.stringify(response)}`);
 
     filter.ondata = async function(event) {
         await console.info(`called ondata requestId = ${requestId}`);
