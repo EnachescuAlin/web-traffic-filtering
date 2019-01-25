@@ -12,6 +12,11 @@ My configuration is:
 - g++ (Ubuntu 5.4.0-6ubuntu1~16.04.10) 5.4.0 20160609
 - GNU Make 4.1
 
+# Dependencies
+- boost.asio (https://github.com/boostorg/asio)
+
+Run `git submodule init` and `git submodule update` to get the dependencies.
+
 # How to build
 Run `make` in the project's root folder.
 
