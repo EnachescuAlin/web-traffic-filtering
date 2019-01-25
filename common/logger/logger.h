@@ -1,3 +1,6 @@
+#ifndef LOGGER_H
+#define LOGGER_H
+
 #include <cstdio>
 #include <string>
 
@@ -36,3 +39,5 @@ extern Logger logger;
 #define LOG_ERROR(fmt, ...) logger.Log(__FUNCTION__, "ERROR", fmt, ##__VA_ARGS__)
 #define LOG_WARNING(fmt, ...) logger.Log(__FUNCTION__, "WARNING", fmt, ##__VA_ARGS__)
 #define LOG_INFO(fmt, ...) logger.Log(__FUNCTION__, "INFO", fmt, ##__VA_ARGS__)
+
+#endif
