@@ -77,6 +77,7 @@ void Logger::Log(const char *functionName, const char *logLevel, const char *for
 
     output.append("\n");
     fputs(output.c_str(), m_file);
+    fflush(m_file);
 }
 
 std::string Logger::_GetLogFilename()
