@@ -1,3 +1,6 @@
-[submodule "asio"]
-	path = asio
-	url = https://github.com/boostorg/asio
+[submodule "third_party/boost/config"]
+	path = third_party/boost/config
+	url = https://github.com/boostorg/config.git
+[submodule "third_party/boost/asio"]
+	path = third_party/boost/asio
+	url = https://github.com/boostorg/asio.git
