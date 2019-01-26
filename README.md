@@ -14,6 +14,22 @@ My configuration is:
 
 # Dependencies
 - boost.asio (https://github.com/boostorg/asio)
+- boost.assert (https://github.com/boostorg/assert)
+- boost.bind (https://github.com/boostorg/bind)
+- boost.config (https://github.com/boostorg/config)
+- boost.core (https://github.com/boostorg/core)
+- boost.date_time (https://github.com/boostorg/date_time)
+- boost.mpl (https://github.com/boostorg/mpl)
+- boost.numeric_conversion (https://github.com/boostorg/numeric_conversion)
+- boost.predef (https://github.com/boostorg/predef)
+- boost.preprocessor (https://github.com/boostorg/preprocessor)
+- boost.regex (https://github.com/boostorg/regex)
+- boost.smart_ptr (https://github.com/boostorg/smart_ptr)
+- boost.static_assert (https://github.com/boostorg/static_assert)
+- boost.system (https://github.com/boostorg/system)
+- boost.throw_exception (https://github.com/boostorg/throw_exception)
+- boost.type_traits (https://github.com/boostorg/type_traits)
+- boost.utility (https://github.com/boostorg/utility)
 
 Run `git submodule init` and `git submodule update` to get the dependencies.
 
