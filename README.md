@@ -30,6 +30,7 @@ My configuration is:
 - boost.throw_exception (https://github.com/boostorg/throw_exception)
 - boost.type_traits (https://github.com/boostorg/type_traits)
 - boost.utility (https://github.com/boostorg/utility)
+- nlohmann.json (https://github.com/nlohmann/json)
 
 Run `git submodule init` and `git submodule update` to get the dependencies.
 
