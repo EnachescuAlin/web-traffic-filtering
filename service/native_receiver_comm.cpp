@@ -1,4 +1,5 @@
 #include "native_receiver_comm.h"
+#include "native_receiver_channel.h"
 #include "logger.h"
 
 NativeReceiverComm::~NativeReceiverComm()
@@ -64,6 +65,13 @@ void NativeReceiverComm::_OnNewChannel(boost::system::error_code ec, boost_tcp::
 {
     if (!ec) {
         LOG_INFO("creating a new channel");
+        auto channel = std::make_shared<NativeReceiverChannel>(std::move(sock));
+        if (channel == nullptr) {
+            LOG_ERROR("could not create a new channel");
+        } else {
+            channel->Start();
+            LOG_INFO("created a new channel");
+        }
     } else {
         LOG_ERROR("called with error [%d]", ec.value());
     }

@@ -3,37 +3,21 @@
 
 #include "logger.h"
 #include "native_receiver_comm.h"
-
-static int getPort(int argc, const char* argv[], short& port)
-{
-    if (argc < 2) {
-        LOG_ERROR("argc [%d] < 2", argc);
-        return 1;
-    }
-
-    port = static_cast<short>(std::atoi(argv[1]));
-    LOG_INFO("detected port = [%d]", static_cast<int>(port));
-
-    return 0;
-}
+#include "comm.h"
 
 int main(int argc, const char* argv[])
 {
     int ret = 0;
     std::string command;
     NativeReceiverComm nativeReceiverComm;
-    short port = 0;
+    short port = COMM_PORT;
     Logger::LoggerConfig config = { "service", true, true, false, true, false, true };
 
     logger.Init(config);
     LOG_INFO("service started");
 
     do {
-        ret = getPort(argc, argv, port);
-        if (ret != 0) {
-            LOG_ERROR("could not get the port");
-            break;
-        }
+        LOG_INFO("port = %d", static_cast<int>(port));
 
         ret = nativeReceiverComm.Run(port);
         if (ret != 0) {
