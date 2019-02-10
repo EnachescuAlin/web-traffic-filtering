@@ -11,11 +11,10 @@ function sendMessageAndWaitForResponse(message) {
             }, (error) => {
                 resolve({ "error": `${error}` });
             })
-    })
+    });
 }
 
-async function onBeforeRequestSendMessage(details)
-{
+async function onBeforeRequestSendMessage(details) {
     let message = {
         state: "onBeforeRequest",
         requestId: details.requestId
@@ -41,6 +40,62 @@ async function onBeforeRequestSendMessage(details)
     return await sendMessageAndWaitForResponse(message);
 }
 
+async function onData(_data, _requestId) {
+    let message = {
+        state: "onData",
+        data: _data,
+        requestId: _requestId
+    };
+
+    await console.info(`sending data requestId = ${_requestId}`
+        + `, message = ${JSON.stringify(message)}`);
+    return await sendMessageAndWaitForResponse(message);
+}
+
+async function onResponseCompleted(_requestId) {
+    let message = {
+        state: "onResponseCompleted",
+        requestId: _requestId
+    };
+
+    await console.info(`sending data requestId = ${_requestId}`
+        + `, message = ${JSON.stringify(message)}`);
+    return await sendMessageAndWaitForResponse(message);
+}
+
+async function onBeforeSendHeadersSendMessage(details)
+{
+    let message = {
+        state: "onBeforeSendHeaders",
+        requestId: details.requestId,
+    }
+    if (details.requestHeaders) {
+        message.requestHeaders = details.requestHeaders;
+    }
+
+    await console.info(`sending data requestId = ${details.requestId}`
+        + `, message = ${JSON.stringify(message)}`);
+    return await sendMessageAndWaitForResponse(message);
+}
+
+async function onHeadersReceivedSendMessage(details)
+{
+    let message = {
+        state: "onHeadersReceived",
+        requestId: details.requestId,
+    }
+    if (details.responseHeaders) {
+        message.responseHeaders = details.responseHeaders;
+    }
+    if (details.statusLine) {
+        message.statusLine = details.statusLine;
+    }
+
+    await console.info(`sending data requestId = ${details.requestId}`
+        + `, message = ${JSON.stringify(message)}`);
+    return await sendMessageAndWaitForResponse(message);
+}
+
 async function onBeforeRequestCbk(details) {
     await console.info(`called onBeforeRequestCbk requestId = ${details.requestId}`);
 
@@ -48,6 +103,7 @@ async function onBeforeRequestCbk(details) {
     let filter = await browser.webRequest.filterResponseData(requestId);
     let decoder = await new TextDecoder("utf-8");
     let encoder = await new TextEncoder();
+    let originalData = "";
 
     await console.info(`onBeforeRequestCbk received details requestId = ${details.requestId}`
         + `, documentUrl = ${details.documentUrl}, originalUrl = ${details.originalUrl}`
@@ -56,15 +112,20 @@ async function onBeforeRequestCbk(details) {
     let response = await onBeforeRequestSendMessage(details);
     await console.info(`onBeforeRequestCbk received response = ${JSON.stringify(response)}`);
 
+    // TODO: parse response
+
     filter.ondata = async function(event) {
         await console.info(`called ondata requestId = ${requestId}`);
 
         let data = await decoder.decode(event.data, { stream: true });
         await console.info(`received data on requestId = ${requestId}, data = ${data}`);
 
-        /*
-         * send response's body to native app
-         */
+        originalData = await originalData.concat(data);
+
+        let response = await onData(data, requestId);
+        await console.info(`onData received response = ${JSON.stringify(response)}`);
+
+        // TODO: parse response
 
         await console.info(`returned from ondata requestId = ${requestId}`);
     }
@@ -73,9 +134,11 @@ async function onBeforeRequestCbk(details) {
         await console.info(`called onstop requestId = ${requestId}`);
 
         let data = "modified content";
-        /*
-         * get response's body from native app
-         */
+
+        let response = await onResponseCompleted(requestId);
+        await console.info(`onResponseCompleted received response = ${JSON.stringify(response)}`);
+
+        // TODO: parse response
 
         await filter.write(encoder.encode(data));
         await filter.close();
@@ -90,9 +153,10 @@ async function onBeforeRequestCbk(details) {
 async function onBeforeSendHeadersCbk(details) {
     await console.info(`called onBeforeSendHeadersCbk requestId = ${details.requestId}`);
 
-    /*
-     * send request's headers to native app and wait for response
-     */
+    let response = await onBeforeSendHeadersSendMessage(details);
+    await console.info(`onBeforeSendHeadersCbk received response = ${JSON.stringify(response)}`);
+
+    // TODO: parse response
 
     await console.info(`returned from onBeforeSendHeadersCbk requestId = ${details.requestId}`);
     return { requestHeaders: details.requestHeaders };
@@ -101,9 +165,10 @@ async function onBeforeSendHeadersCbk(details) {
 async function onHeadersReceivedCbk(details) {
     await console.info(`called onHeadersReceivedCbk requestId = ${details.requestId}`);
 
-    /*
-     * send statusLine and response's headers to native app and wait for response
-     */
+    let response = await onHeadersReceivedSendMessage(details);
+    await console.info(`onHeadersReceivedCbk received response = ${JSON.stringify(response)}`);
+
+    // TODO: parse response
 
     await console.info(`returned from onHeadersReceivedCbk requestId = ${details.requestId}`);
     return { responseHeaders: details.responseHeaders };
