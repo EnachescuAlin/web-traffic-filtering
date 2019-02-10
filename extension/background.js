@@ -16,7 +16,10 @@ function sendMessageAndWaitForResponse(message) {
 
 async function onBeforeRequestSendMessage(details)
 {
-    let message = { state: "onBeforeRequest" };
+    let message = {
+        state: "onBeforeRequest",
+        requestId: details.requestId
+    };
     if (details.documentUrl) {
         message.documentUrl = details.documentUrl;
     }
