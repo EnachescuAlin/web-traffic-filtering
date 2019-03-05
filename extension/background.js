@@ -40,11 +40,11 @@ async function onBeforeRequestSendMessage(details) {
     return await sendMessageAndWaitForResponse(message);
 }
 
-async function onData(_data, _requestId) {
+async function onResponseCompleted(_requestId, _data) {
     let message = {
-        state: "onData",
-        data: _data,
-        requestId: _requestId
+        state: "onResponseCompleted",
+        requestId: _requestId,
+        data: _data
     };
 
     await console.info(`sending data requestId = ${_requestId}`
@@ -52,15 +52,37 @@ async function onData(_data, _requestId) {
     return await sendMessageAndWaitForResponse(message);
 }
 
-async function onResponseCompleted(_requestId) {
-    let message = {
-        state: "onResponseCompleted",
-        requestId: _requestId
-    };
+async function parseOnResponseCompletedRsp(response, filter, encoder, originalData) {
+    do {
+        if (response.error) {
+            await console.error(`send onResponseCompleted failed [${response.error}]`);
+            break;
+        }
 
-    await console.info(`sending data requestId = ${_requestId}`
-        + `, message = ${JSON.stringify(message)}`);
-    return await sendMessageAndWaitForResponse(message);
+        if (!response.status) {
+            await console.error(`could not parse response from native receiver`);
+            break;
+        }
+
+        if (response.status === "allowed") {
+            await console.info(`allowed original data`);
+            break;
+        }
+
+        if (response.status !== "blocked") {
+            await console.error(`unknown response status [${response.status}]`);
+            break;
+        }
+
+        // insert the traffic received from service
+        await filter.write(encoder.encode(response.data));
+        await filter.close();
+        return;
+    } while (false);
+
+    // insert the original traffic
+    await filter.write(encoder.encode(originalData));
+    await filter.close();
 }
 
 async function onBeforeSendHeadersSendMessage(details)
@@ -104,15 +126,11 @@ async function onBeforeRequestCbk(details) {
     let decoder = await new TextDecoder("utf-8");
     let encoder = await new TextEncoder();
     let originalData = "";
+    let error = false;
 
     await console.info(`onBeforeRequestCbk received details requestId = ${details.requestId}`
         + `, documentUrl = ${details.documentUrl}, originalUrl = ${details.originalUrl}`
         + `, url = ${details.url}, method = ${details.method}, requestBody = ${details.requestBody}`);
-
-    let response = await onBeforeRequestSendMessage(details);
-    await console.info(`onBeforeRequestCbk received response = ${JSON.stringify(response)}`);
-
-    // TODO: parse response
 
     filter.ondata = async function(event) {
         await console.info(`called ondata requestId = ${requestId}`);
@@ -122,56 +140,112 @@ async function onBeforeRequestCbk(details) {
 
         originalData = await originalData.concat(data);
 
-        let response = await onData(data, requestId);
-        await console.info(`onData received response = ${JSON.stringify(response)}`);
-
-        // TODO: parse response
-
         await console.info(`returned from ondata requestId = ${requestId}`);
     }
 
     filter.onstop = async function(event) {
         await console.info(`called onstop requestId = ${requestId}`);
 
-        let data = "modified content";
+        if (error === true) {
+            await console.info('error is set => dont send onResponseCompleted to native receiver');
 
-        let response = await onResponseCompleted(requestId);
-        await console.info(`onResponseCompleted received response = ${JSON.stringify(response)}`);
+            // insert the original traffic
+            await filter.write(encoder.encode(originalData));
+            await filter.close();
+        } else {
+            // send originalData to service
+            let response = await onResponseCompleted(requestId, originalData);
+            await console.info(`onResponseCompleted received response = ${JSON.stringify(response)}`);
 
-        // TODO: parse response
-
-        await filter.write(encoder.encode(data));
-        await filter.close();
+            await parseOnResponseCompletedRsp(response, filter, encoder, originalData);
+        }
 
         await console.info(`returned from onstop requestId = ${requestId}`);
     }
 
+    let ret = {};
+    let response = await onBeforeRequestSendMessage(details);
+    await console.info(`onBeforeRequestCbk received response = ${JSON.stringify(response)}`);
+
+    if (response.error) {
+        await console.error(`onBeforeRequest failed [${response.error}]`);
+        error = true;
+    } else if (response.status) {
+        if (response.status === "cancel") {
+            await console.info(`cancelled request`);
+            ret.cancel = "true";
+        } else if (response.status === "redirect") {
+            await console.info(`redirect request to ${response.redirectUrl}`);
+            ret.redirectUrl = response.redirectUrl;
+        } else if (response.status === "filter") {
+            await console.info(`filtering request`);
+        } else {
+            await console.error(`unknown response status [${response.status}]`);
+            error = true;
+        }
+    } else {
+        await console.error(`could not parse response from native receiver`)
+        error = true;
+    }
+
     await console.info(`returned from onBeforeRequestCbk requestId = ${requestId}`);
-    return {};
+    return ret;
 }
 
 async function onBeforeSendHeadersCbk(details) {
     await console.info(`called onBeforeSendHeadersCbk requestId = ${details.requestId}`);
 
+    let ret = { requestHeaders: details.requestHeaders };
     let response = await onBeforeSendHeadersSendMessage(details);
     await console.info(`onBeforeSendHeadersCbk received response = ${JSON.stringify(response)}`);
 
-    // TODO: parse response
+    if (response.error) {
+        await console.error(`onBeforeSendHeaders failed [${response.error}]`);
+    } else {
+        if (response.status === "allow") {
+            await console.info(`allowed the original headers`);
+        } else if (response.status === "block") {
+            await console.info(`blocked the original headers`);
+            if (response.headers) {
+                ret = { requestHeaders: response.headers };
+            } else {
+                await console.info(`response headers is not set`);
+            }
+        } else {
+            await console.error(`unknown response status [${response.status}]`);
+        }
+    }
 
     await console.info(`returned from onBeforeSendHeadersCbk requestId = ${details.requestId}`);
-    return { requestHeaders: details.requestHeaders };
+    return ret;
 }
 
 async function onHeadersReceivedCbk(details) {
     await console.info(`called onHeadersReceivedCbk requestId = ${details.requestId}`);
 
+    let ret = { responseHeaders: details.responseHeaders };
     let response = await onHeadersReceivedSendMessage(details);
     await console.info(`onHeadersReceivedCbk received response = ${JSON.stringify(response)}`);
 
-    // TODO: parse response
+    if (response.error) {
+        await console.error(`onHeadersReceived failed [${response.error}]`);
+    } else {
+        if (response.status === "allow") {
+            await console.info(`allowed the original headers`);
+        } else if (response.status === "block") {
+            await console.info(`blocked the original headers`);
+            if (response.headers) {
+                ret = { responseHeaders: response.headers };
+            } else {
+                await console.info(`response headers is not set`);
+            }
+        } else {
+            await console.error(`unknown response status [${response.status}]`);
+        }
+    }
 
     await console.info(`returned from onHeadersReceivedCbk requestId = ${details.requestId}`);
-    return { responseHeaders: details.responseHeaders };
+    return ret;
 }
 
 browser.webRequest.onBeforeRequest.addListener(
