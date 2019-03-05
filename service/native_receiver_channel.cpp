@@ -10,9 +10,10 @@ std::atomic<uint64_t> g_channelId(1);
 #define CHANNEL_LOG_INFO(fmt, ...) LOG_INFO("[channel_%llu] " fmt, m_id, ##__VA_ARGS__)
 #define CHANNEL_LOG_ERROR(fmt, ...) LOG_ERROR("[channel_%llu] " fmt, m_id, ##__VA_ARGS__)
 
-NativeReceiverChannel::NativeReceiverChannel(boost_tcp::socket sock)
+NativeReceiverChannel::NativeReceiverChannel(boost_tcp::socket sock, Requests& requests)
     : m_sock(std::move(sock))
     , m_id(g_channelId.fetch_add(1))
+    , m_requests(requests)
 {
     CHANNEL_LOG_INFO("created channel");
 }
@@ -75,7 +76,7 @@ void NativeReceiverChannel::ReadMsgBody()
             } else {
                 if (!ec) {
                     CHANNEL_LOG_INFO("received msg body");
-                    self->SendMsg("test");
+                    self->ProcessingMsg();
                     self->m_sock.close();
                 } else {
                     CHANNEL_LOG_ERROR("could not read msg body [%d]", ec.value());
@@ -86,12 +87,15 @@ void NativeReceiverChannel::ReadMsgBody()
     );
 }
 
+void NativeReceiverChannel::ProcessingMsg()
+{
+    SendMsg(m_requests.OnMsg(m_msg.GetBuffer()));
+}
+
 void NativeReceiverChannel::SendMsg(const std::string& msg)
 {
     CHANNEL_LOG_INFO("send msg [%s]", msg.c_str());
-    nlohmann::json rsp;
-    rsp["error"] = msg;
-    CommSendMsg comm_msg(rsp.dump());
 
+    CommSendMsg comm_msg(msg);
     boost::asio::write(m_sock, boost::asio::buffer(comm_msg.GetBuffer(), comm_msg.GetSize()));
 }

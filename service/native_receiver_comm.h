@@ -1,6 +1,8 @@
 #ifndef NATIVE_RECEIVER_COMM_H
 #define NATIVE_RECEIVER_COMM_H
 
+#include "requests.h"
+
 #include <thread>
 
 #include <boost/asio.hpp>
@@ -24,6 +26,7 @@ private:
     boost::asio::io_context* m_ioCtx = nullptr;
     boost_tcp::acceptor* m_acceptor = nullptr;
     std::thread m_commThread;
+    Requests m_requests;
 };
 
 #endif

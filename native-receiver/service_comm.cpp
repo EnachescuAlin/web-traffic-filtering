@@ -3,7 +3,6 @@
 #include "comm.h"
 
 ServiceComm::ServiceComm()
-   // : m_responseFuture(m_responsePromise.get_future())
 {
     m_responseFuture = m_responsePromise.get_future();
 }

@@ -65,7 +65,7 @@ void NativeReceiverComm::_OnNewChannel(boost::system::error_code ec, boost_tcp::
 {
     if (!ec) {
         LOG_INFO("creating a new channel");
-        auto channel = std::make_shared<NativeReceiverChannel>(std::move(sock));
+        auto channel = std::make_shared<NativeReceiverChannel>(std::move(sock), m_requests);
         if (channel == nullptr) {
             LOG_ERROR("could not create a new channel");
         } else {
