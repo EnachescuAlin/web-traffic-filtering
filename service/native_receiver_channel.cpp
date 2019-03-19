@@ -89,7 +89,8 @@ void NativeReceiverChannel::ReadMsgBody()
 
 void NativeReceiverChannel::ProcessingMsg()
 {
-    SendMsg(m_requests.OnMsg(m_msg.GetBuffer()));
+    std::string rawMsg(m_msg.GetBuffer(), m_msg.GetBodySize());
+    SendMsg(m_requests.OnMsg(rawMsg.c_str()));
 }
 
 void NativeReceiverChannel::SendMsg(const std::string& msg)
