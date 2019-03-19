@@ -127,6 +127,7 @@ async function onBeforeRequestCbk(details) {
     let encoder = await new TextEncoder();
     let originalData = "";
     let error = false;
+    let cancelledRequest = false;
 
     await console.info(`onBeforeRequestCbk received details requestId = ${details.requestId}`
         + `, documentUrl = ${details.documentUrl}, originalUrl = ${details.originalUrl}`
@@ -146,7 +147,9 @@ async function onBeforeRequestCbk(details) {
     filter.onstop = async function(event) {
         await console.info(`called onstop requestId = ${requestId}`);
 
-        if (error === true) {
+        if (cancelledRequest === true) {
+            await console.info('the request was cancelled');
+        } else if (error === true) {
             await console.info('error is set => dont send onResponseCompleted to native receiver');
 
             // insert the original traffic
@@ -174,6 +177,7 @@ async function onBeforeRequestCbk(details) {
         if (response.status === "cancel") {
             await console.info(`cancelled request`);
             ret.cancel = "true";
+            cancelledRequest = true;
         } else if (response.status === "redirect") {
             await console.info(`redirect request to ${response.redirectUrl}`);
             ret.redirectUrl = response.redirectUrl;
@@ -235,6 +239,7 @@ async function onHeadersReceivedCbk(details) {
         } else if (response.status === "block") {
             await console.info(`blocked the original headers`);
             if (response.headers) {
+                details.responseHeaders = response.headers;
                 ret = { responseHeaders: response.headers };
             } else {
                 await console.info(`response headers is not set`);
