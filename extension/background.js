@@ -1,6 +1,8 @@
 let filteredUrls = [
     //"<all_urls>"
-    "http://www.phiorg.ro/*"
+    "http://www.phiorg.ro/*",
+    "https://www.emag.ro/",
+    //"https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/API/webRequest/HttpHeaders"
 ];
 
 function sendMessageAndWaitForResponse(message) {
@@ -32,7 +34,7 @@ async function onBeforeRequestSendMessage(details) {
         message.method = details.method;
     }
     if (details.requestBody) {
-        message.requestBody = details.requestBody;
+        message.requestBody = JSON.stringify(details.requestBody);
     }
 
     await console.info(`sending data requestId = ${details.requestId}`
@@ -120,6 +122,10 @@ async function onHeadersReceivedSendMessage(details)
 
 async function onBeforeRequestCbk(details) {
     await console.info(`called onBeforeRequestCbk requestId = ${details.requestId}`);
+    if (await JSON.stringify(details.requestId).startsWith("\"fakeRequest") === true) {
+        await console.info(`ignore onBeforeRequestCbk because is fake request = ${details.requestId}`);
+        return {}
+    }
 
     let requestId = details.requestId;
     let filter = await browser.webRequest.filterResponseData(requestId);
@@ -198,6 +204,10 @@ async function onBeforeRequestCbk(details) {
 
 async function onBeforeSendHeadersCbk(details) {
     await console.info(`called onBeforeSendHeadersCbk requestId = ${details.requestId}`);
+    if (await JSON.stringify(details.requestId).startsWith("\"fakeRequest")) {
+        await console.info(`ignore onBeforeSendHeadersCbk because is fake request = ${details.requestId}`);
+        return { requestHeaders: details.requestHeaders };
+    }
 
     let ret = { requestHeaders: details.requestHeaders };
     let response = await onBeforeSendHeadersSendMessage(details);
@@ -226,6 +236,10 @@ async function onBeforeSendHeadersCbk(details) {
 
 async function onHeadersReceivedCbk(details) {
     await console.info(`called onHeadersReceivedCbk requestId = ${details.requestId}`);
+    if (await JSON.stringify(details.requestId).startsWith("\"fakeRequest")) {
+        await console.info(`ignore onHeadersReceivedCbk because is fake request = ${details.requestId}`);
+        return { responseHeaders: details.responseHeaders };
+    }
 
     let ret = { responseHeaders: details.responseHeaders };
     let response = await onHeadersReceivedSendMessage(details);
