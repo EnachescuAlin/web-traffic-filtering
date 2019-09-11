@@ -15,6 +15,8 @@ NativeReceiverComm::~NativeReceiverComm()
 int NativeReceiverComm::Run(short port)
 {
     try {
+        m_requests.Init();
+
         LOG_INFO("run on port %d", static_cast<int>(port));
 
         m_ioCtx = new boost::asio::io_context();

@@ -31,7 +31,7 @@ std::string Requests::OnMsg(const char *msg)
     if (state == "onBeforeRequest") {
         LOG_INFO("created a new request, id = %llu", reqId);
 
-        reqPtr = std::make_shared<Request>(reqId);
+        reqPtr = std::make_shared<Request>(reqId, m_signatures);
         InsertRequestPtr(reqId, reqPtr);
     } else {
         LOG_INFO("processing msg, state = [%s], id = %llu", state.c_str(), reqId);
@@ -75,8 +75,9 @@ std::shared_ptr<Requests::Request> Requests::GetRequestPtr(uint64_t id)
     return it->second;
 }
 
-Requests::Request::Request(uint64_t id)
+Requests::Request::Request(uint64_t id, const Signatures& signatures)
     : m_reqId(id)
+    , m_signatures(signatures)
 {
 }
 
@@ -195,16 +196,25 @@ std::string Requests::Request::ScanEngineBeforeRequest(bool& removeReq)
     nlohmann::json rsp;
     rsp["status"] = "filter";
 
-    if (m_url.has_value()) {
-        if (*m_url == "http://www.phiorg.ro/web_traffic_filtering/cancel_request") {
-            rsp["status"] = "cancel";
-            removeReq = true;
-        } else if (*m_url == "http://www.phiorg.ro/web_traffic_filtering/redirect_request") {
-            rsp["status"] = "redirect";
-            rsp["redirectUrl"] = "http://www.phiorg.ro/web_traffic_filtering/redirected_request";
-            removeReq = true;
+    do {
+        if (m_url.has_value() == false) {
+            break;
         }
-    }
+
+        BeforeRequestStatus status;
+        bool found = m_signatures.MatchSignatureBeforeRequest(*m_url, status);
+        if (found == false) {
+            break;
+        }
+
+        rsp["status"] = status.status;
+        if (status.status == "cancel") {
+            removeReq = true;
+        } else if (status.status == "redirect") {
+            removeReq = true;
+            rsp["redirectUrl"] = status.redirectUrl;
+        }
+    } while (false);
 
     return rsp.dump();
 }
@@ -215,23 +225,62 @@ std::string Requests::Request::ScanEngineBeforeSendHeaders(bool& removeReq)
     nlohmann::json rsp;
     rsp["status"] = "allow";
 
-    if (m_url.has_value() &&
-        *m_url == "http://www.phiorg.ro/web_traffic_filtering/modify_client_headers") {
-        rsp["status"] = "block";
+    do {
+        if (m_url.has_value() == false) {
+            break;
+        }
+
+        HeadersStatus status;
+        bool found = m_signatures.MatchSignatureBeforeSendHeaders(*m_url, status);
+        if (found == false) {
+            break;
+        }
+
+        if (status.status == "allow") {
+            break;
+        }
+
+        std::map<std::string, std::string> finalHeaders;
+
+        if (status.originalHeaders == true) {
+            finalHeaders = m_requestHeaders;
+        }
+
+        // add
+        for (auto& i : status.headers) {
+            if (i.op == HeaderOperation::op_add) {
+                if (finalHeaders.find(i.name) == finalHeaders.end()) {
+                    finalHeaders[i.name] = i.value;
+                }
+            }
+        }
+
+        // remove
+        for (auto& i : status.headers) {
+            if (i.op == HeaderOperation::op_remove) {
+                finalHeaders.erase(i.name);
+            }
+        }
+
+        // modify
+        for (auto& i : status.headers) {
+            if (i.op == HeaderOperation::op_modify) {
+                auto found = finalHeaders.find(i.name);
+                if (found != finalHeaders.end()) {
+                    found->second = i.value;
+                }
+            }
+        }
+
+        rsp["status"] = status.status;
         rsp["headers"] = nlohmann::json::array();
-        for (auto& h : m_requestHeaders) {
+        for (auto& h : finalHeaders) {
             nlohmann::json header = nlohmann::json::object();
             header["name"] = h.first;
             header["value"] = h.second;
             rsp["headers"].push_back(header);
         }
-
-        // append a new header
-        nlohmann::json header = nlohmann::json::object();
-        header["name"] = "scan-engine";
-        header["value"] = "demo";
-        rsp["headers"].push_back(header);
-    }
+    } while (false);
 
     return rsp.dump();
 }
@@ -242,23 +291,62 @@ std::string Requests::Request::ScanEngineHeadersReceived(bool& removeReq)
     nlohmann::json rsp;
     rsp["status"] = "allow";
 
-    if (m_url.has_value() &&
-        *m_url == "http://www.phiorg.ro/web_traffic_filtering/modify_server_headers") {
-        rsp["status"] = "block";
+    do {
+        if (m_url.has_value() == false) {
+            break;
+        }
+
+        HeadersStatus status;
+        bool found = m_signatures.MatchSignatureHeadersReceived(*m_url, status);
+        if (found == false) {
+            break;
+        }
+
+        if (status.status == "allow") {
+            break;
+        }
+
+        std::map<std::string, std::string> finalHeaders;
+
+        if (status.originalHeaders == true) {
+            finalHeaders = m_responseHeaders;
+        }
+
+        // add
+        for (auto& i : status.headers) {
+            if (i.op == HeaderOperation::op_add) {
+                if (finalHeaders.find(i.name) == finalHeaders.end()) {
+                    finalHeaders[i.name] = i.value;
+                }
+            }
+        }
+
+        // remove
+        for (auto& i : status.headers) {
+            if (i.op == HeaderOperation::op_remove) {
+                finalHeaders.erase(i.name);
+            }
+        }
+
+        // modify
+        for (auto& i : status.headers) {
+            if (i.op == HeaderOperation::op_modify) {
+                auto found = finalHeaders.find(i.name);
+                if (found != finalHeaders.end()) {
+                    found->second = i.value;
+                }
+            }
+        }
+
+        rsp["status"] = status.status;
         rsp["headers"] = nlohmann::json::array();
-        for (auto& h : m_responseHeaders) {
+        for (auto& h : finalHeaders) {
             nlohmann::json header = nlohmann::json::object();
             header["name"] = h.first;
             header["value"] = h.second;
             rsp["headers"].push_back(header);
         }
-
-        // append a new header
-        nlohmann::json header = nlohmann::json::object();
-        header["name"] = "Set-Cookie";
-        header["value"] = "scan-engine=web-traffic-filtering-demo";
-        rsp["headers"].push_back(header);
-    }
+    } while (false);
 
     return rsp.dump();
 }
@@ -280,21 +368,34 @@ static void replaceData(std::string& data, const std::string& oldSubstr, const s
 
 std::string Requests::Request::ScanEngineResponseCompleted(bool& removeReq)
 {
-    removeReq = false;
+    removeReq = true;
     nlohmann::json rsp;
     rsp["status"] = "allowed";
 
-    if (m_url.has_value()) {
-        if (*m_url == "http://www.phiorg.ro/web_traffic_filtering/modify_server_response") {
-            rsp["status"] = "blocked";
-            std::string data = m_responseBody;
-            replaceData(data, "test modify_server_response", "modified by web-traffic-filtering-demo");
-            rsp["data"] = data;
-        } else if (*m_url == "http://www.phiorg.ro/web_traffic_filtering/change_server_response") {
-            rsp["status"] = "blocked";
-            rsp["data"] = "blocked by web-traffic-filtering-demo";
+    do {
+        if (m_url.has_value() == false) {
+            break;
         }
-    }
+
+        ResponseCompletedStatus status;
+        bool found = m_signatures.MatchSignatureResponseCompleted(*m_url, status);
+        if (found == false) {
+            break;
+        }
+
+        if (status.status == "allow") {
+            break;
+        }
+
+        if (status.status == "block") {
+            rsp["data"] = status.newData;
+        } else {
+            std::string data = m_responseBody;
+            replaceData(data, status.oldData, status.newData);
+            rsp["data"] = data;
+        }
+        rsp["status"] = "blocked";
+    } while (false);
 
     return rsp.dump();
 }

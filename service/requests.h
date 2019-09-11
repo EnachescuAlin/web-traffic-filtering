@@ -9,17 +9,24 @@
 
 #include <nlohmann/json.hpp>
 
+#include "signatures.h"
+
 class Requests {
 public:
     Requests() = default;
     ~Requests() = default;
+
+    void Init()
+    {
+        m_signatures.Init();
+    }
 
     std::string OnMsg(const char *msg);
 
 private:
     class Request {
     public:
-        Request(uint64_t id);
+        Request(uint64_t id, const Signatures& signatures);
         ~Request() = default;
 
         std::string OnMsg(const std::string& state, const nlohmann::json& msg, bool& removeReq);
@@ -39,6 +46,7 @@ private:
 
     private:
         uint64_t m_reqId;
+        const Signatures& m_signatures;
         std::mutex m_lock;
         std::string m_state;
 
@@ -67,6 +75,7 @@ private:
 
 private:
     std::map<uint64_t, std::shared_ptr<Request>> m_requests;
+    Signatures m_signatures;
 };
 
 #endif

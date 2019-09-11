@@ -1,0 +1,74 @@
+{
+    "beforeRequest": [
+        {
+            "url": "http://www.phiorg.ro/web_traffic_filtering/cancel_request",
+            "status": "cancel"
+        },
+        {
+            "url": "http://www.phiorg.ro/web_traffic_filtering/redirect_request",
+            "status": "redirect",
+            "redirectUrl": "http://www.phiorg.ro/web_traffic_filtering/redirected_request"
+        },
+        {
+            "url": "https://www.emag.ro/",
+            "status": "redirect",
+            "redirectUrl": "https://www.google.com"
+        }
+    ],
+    "beforeSendHeaders": [
+        {
+            "url": "http://www.phiorg.ro/web_traffic_filtering/modify_client_headers",
+            "status": "block",
+            "originalHeaders": true,
+            "headers": [
+                {
+                    "operation": "add",
+                    "name": "scan-engine",
+                    "value": "demo"
+                },
+                {
+                    "operation": "remove",
+                    "name": "Connection"
+                },
+                {
+                    "operation": "modify",
+                    "name": "User-Agent",
+                    "value": "web-traffic-filtering"
+                }
+            ]
+        }
+    ],
+    "headersReceived": [
+        {
+            "url": "http://www.phiorg.ro/web_traffic_filtering/modify_server_headers",
+            "status": "block",
+            "originalHeaders": true,
+            "headers": [
+                {
+                    "operation": "add",
+                    "name": "Set-Cookie",
+                    "value": "web-traffic-filtering=demo"
+                }
+            ]
+        }
+    ],
+    "responseCompleted": [
+        {
+            "url": "http://www.phiorg.ro/web_traffic_filtering/modify_server_response",
+            "status": "modify",
+            "old_data": "test modify_server_response",
+            "new_data": "modified by web-traffic-filtering-demo"
+        },
+        {
+            "url": "http://www.phiorg.ro/web_traffic_filtering/change_server_response",
+            "status": "block",
+            "new_data": "blocked by web-traffic-filtering-demo"
+        },
+        {
+            "url": "https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/API/webRequest/HttpHeaders",
+            "status": "modify",
+            "old_data": "webRequest.HttpHeaders",
+            "new_data": "modified by web-traffic-filtering-demo"
+        }
+    ]
+}

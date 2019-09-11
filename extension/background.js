@@ -2,7 +2,7 @@ let filteredUrls = [
     //"<all_urls>"
     "http://www.phiorg.ro/*",
     "https://www.emag.ro/",
-    //"https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/API/webRequest/HttpHeaders"
+    "https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/API/webRequest/HttpHeaders"
 ];
 
 function sendMessageAndWaitForResponse(message) {

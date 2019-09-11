@@ -41,7 +41,7 @@ SERVICE_INCLUDE_PATH =                                   \
     $(BOOST_INCLUDE_PATH)                                \
     $(COMM_MSG_INCLUDE_PATH)                             \
     $(JSON_INCLUDE_PATH)
-_SERVICE_OBJ = main.o native_receiver_comm.o native_receiver_channel.o requests.o
+_SERVICE_OBJ = main.o native_receiver_comm.o native_receiver_channel.o requests.o signatures.o
 SERVICE_OBJ = $(patsubst %,$(SERVICE_BIN_DIR)/%,$(_SERVICE_OBJ))
 
 NATIVE_RECEIVER_BIN_DIR = $(BIN_DIR)/native-receiver
